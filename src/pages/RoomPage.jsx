@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CopyButton } from '../components/CopyButton.jsx'
+import { AppleShortcutCard } from '../components/AppleShortcutCard.jsx'
 import { InfoIcon, LeaveIcon, UserIcon } from '../components/Icons.jsx'
+import { PlatformRoles } from '../components/PlatformRoles.jsx'
 import { RoomCodeCard } from '../components/RoomCodeCard.jsx'
+import { SpotifyRoomCard } from '../components/SpotifyRoomCard.jsx'
 import {
   getRoom,
   heartbeatRoom,
@@ -49,6 +52,7 @@ function RoomStateCard({ title, message, children, loading = false }) {
 export function RoomPage() {
   const { code: codeParam = '' } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const code = normalizeRoomCode(codeParam)
   const participantToken = getParticipantToken(code)
   const [room, setRoom] = useState(null)
@@ -226,10 +230,62 @@ export function RoomPage() {
             <ParticipantSlot number="2" occupied={room.participantsCount > 1} />
           </div>
 
-          <div className="future-note">
-            <InfoIcon />
-            <span>Soon, this is where each person will connect Spotify or Apple Music and choose a playlist to sync.</span>
-          </div>
+          <PlatformRoles
+            code={room.code}
+            participantToken={participantToken}
+            currentRole={room.currentParticipant?.role ?? null}
+            partnerRole={room.partner?.role ?? null}
+            onRolesUpdated={(platform) => {
+              setRoom((current) => ({
+                ...current,
+                currentParticipant: platform.currentParticipant,
+                partner: platform.partner,
+                rolesAssigned: platform.rolesAssigned,
+                apple: platform.apple,
+              }))
+            }}
+          />
+
+          {room.currentParticipant?.role && (
+            <>
+              <SpotifyRoomCard
+                code={room.code}
+                participantToken={participantToken}
+                spotify={room.spotify ?? {
+                  connected: false,
+                  canManage: false,
+                  displayName: null,
+                  playlist: null,
+                }}
+                oauthResult={searchParams.get('spotify')}
+                onSpotifyUpdated={(spotify) => {
+                  setRoom((current) => ({ ...current, spotify }))
+                }}
+              />
+
+              <AppleShortcutCard
+                code={room.code}
+                participantToken={participantToken}
+                apple={room.apple ?? {
+                  configured: false,
+                  verified: false,
+                  canManage: false,
+                }}
+                appleRolePresent={[
+                  room.currentParticipant?.role,
+                  room.partner?.role,
+                ].includes('apple_music')}
+                onAppleUpdated={(apple) => {
+                  setRoom((current) => ({ ...current, apple }))
+                }}
+              />
+
+              <div className="future-note">
+                <InfoIcon />
+                <span>Song matching and playlist synchronization come in the next milestone.</span>
+              </div>
+            </>
+          )}
 
           {connectionError && <p className="connection-notice" role="status">{connectionError}</p>}
           {leaveError && <p className="form-error room-action-error" role="alert">{leaveError}</p>}

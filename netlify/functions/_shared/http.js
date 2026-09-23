@@ -19,6 +19,16 @@ export function json(body, status = 200) {
   })
 }
 
+export function redirect(location, status = 302) {
+  return new Response(null, {
+    status,
+    headers: {
+      'cache-control': 'no-store',
+      location,
+    },
+  })
+}
+
 export function requirePost(request) {
   if (request.method !== 'POST') {
     throw new RequestError('method_not_allowed', 'Use POST for this endpoint.', 405)
@@ -42,6 +52,20 @@ export async function readJson(request) {
     return body
   } catch {
     throw new RequestError('invalid_json', 'Send a valid JSON request body.')
+  }
+}
+
+export async function readForm(request) {
+  const contentLength = Number(request.headers.get('content-length') ?? 0)
+
+  if (contentLength > 4096) {
+    throw new RequestError('request_too_large', 'Request body is too large.', 413)
+  }
+
+  try {
+    return await request.formData()
+  } catch {
+    throw new RequestError('invalid_form', 'Send a valid form request.')
   }
 }
 

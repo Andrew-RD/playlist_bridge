@@ -9,7 +9,7 @@ export class RoomApiError extends Error {
   }
 }
 
-async function post(endpoint, body, options = {}) {
+export async function postFunction(endpoint, body, options = {}) {
   let response
 
   try {
@@ -57,21 +57,21 @@ export function normalizeRoomCode(value) {
 }
 
 export function createRoom(options) {
-  return post('create-room', {}, options)
+  return postFunction('create-room', {}, options)
 }
 
 export function joinRoom(code, participantToken, options) {
-  return post('join-room', { code, participantToken }, options)
+  return postFunction('join-room', { code, participantToken }, options)
 }
 
 export function getRoom(code, participantToken, options) {
-  return post('get-room', { code, participantToken }, options)
+  return postFunction('get-room', { code, participantToken }, options)
 }
 
 export function leaveRoom(code, participantToken, options) {
-  return post('leave-room', { code, participantToken }, options)
+  return postFunction('leave-room', { code, participantToken }, options)
 }
 
 export function heartbeatRoom(code, participantToken, options) {
-  return post('heartbeat', { code, participantToken }, options)
+  return postFunction('heartbeat', { code, participantToken }, options)
 }

@@ -1,6 +1,8 @@
 import { randomBytes, randomUUID } from 'node:crypto'
 import { RequestError, roomFromRpc } from './http.js'
+import { getPlatformRoomState } from './platform-service.js'
 import { firstRpcRow, getSupabase } from './supabase.js'
+import { getSpotifyRoomState } from './spotify-service.js'
 import { isValidParticipantToken, isValidRoomCode, normalizeRoomCode } from './validation.js'
 
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -52,6 +54,22 @@ async function callRoomRpc(name, params) {
   }
 
   return row
+}
+
+async function enrichRoom(room, code, participantToken) {
+  const [platform, spotify] = await Promise.all([
+    getPlatformRoomState(code, participantToken),
+    getSpotifyRoomState(code, participantToken),
+  ])
+
+  return {
+    ...room,
+    currentParticipant: platform.currentParticipant,
+    partner: platform.partner,
+    rolesAssigned: platform.rolesAssigned,
+    spotify,
+    apple: platform.apple,
+  }
 }
 
 export async function createRoom() {
@@ -115,7 +133,9 @@ export async function getRoom(codeValue, tokenValue) {
     throw new RequestError('not_participant', 'You are no longer a participant in this room.', 403)
   }
 
-  return { room: roomFromRpc(row) }
+  return {
+    room: await enrichRoom(roomFromRpc(row), code, participantToken),
+  }
 }
 
 export async function leaveRoom(codeValue, tokenValue) {
@@ -148,5 +168,7 @@ export async function heartbeatRoom(codeValue, tokenValue) {
     throw new RequestError('not_participant', 'You are no longer a participant in this room.', 403)
   }
 
-  return { room: roomFromRpc(row) }
+  return {
+    room: await enrichRoom(roomFromRpc(row), code, participantToken),
+  }
 }
