@@ -1,9 +1,22 @@
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { BackLink } from '../components/BackLink.jsx'
 import { CopyButton } from '../components/CopyButton.jsx'
 import { InfoIcon, LeaveIcon, UserIcon } from '../components/Icons.jsx'
 import { RoomCodeCard } from '../components/RoomCodeCard.jsx'
-import { getRoom, leaveRoom, normalizeRoomCode } from '../utils/roomStorage.js'
+import {
+  getRoom,
+  heartbeatRoom,
+  leaveRoom,
+  normalizeRoomCode,
+} from '../api/roomApi.js'
+import {
+  getParticipantToken,
+  removeParticipantToken,
+} from '../utils/roomSession.js'
+
+const POLL_INTERVAL_MS = 3000
+const HEARTBEAT_INTERVAL_MS = 25000
+const TERMINAL_ROOM_ERRORS = new Set(['room_not_found', 'not_participant'])
 
 function ParticipantSlot({ number, occupied }) {
   return (
@@ -11,10 +24,25 @@ function ParticipantSlot({ number, occupied }) {
       <span className={`participant-avatar${occupied ? '' : ' empty'}`}><UserIcon /></span>
       <div>
         <h3>Participant {number}</h3>
-        <p>{occupied ? 'Joined the room' : 'Waiting to join'}</p>
+        <p>{occupied ? 'Connected to the room' : 'Waiting to join'}</p>
       </div>
-      <span className={`slot-state${occupied ? '' : ' empty'}`} aria-label={occupied ? 'Joined' : 'Empty'} />
+      <span className={`slot-state${occupied ? '' : ' empty'}`} aria-label={occupied ? 'Connected' : 'Empty'} />
     </article>
+  )
+}
+
+function RoomStateCard({ title, message, children, loading = false }) {
+  return (
+    <div className="page flow-page">
+      <div className="flow-wrap">
+        <div className="glass-card empty-room">
+          {loading && <span className="loading-spinner" aria-hidden="true" />}
+          <h1>{title}</h1>
+          <p>{message}</p>
+          {children}
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -22,35 +50,155 @@ export function RoomPage() {
   const { code: codeParam = '' } = useParams()
   const navigate = useNavigate()
   const code = normalizeRoomCode(codeParam)
-  const room = getRoom(code)
+  const participantToken = getParticipantToken(code)
+  const [room, setRoom] = useState(null)
+  const [viewState, setViewState] = useState('loading')
+  const [connectionError, setConnectionError] = useState('')
+  const [leaveError, setLeaveError] = useState('')
+  const [isLeaving, setIsLeaving] = useState(false)
+  const [retryKey, setRetryKey] = useState(0)
 
-  function handleLeaveRoom() {
+  useEffect(() => {
+    if (!participantToken) return undefined
+
+    let active = true
+    let terminal = false
+    let pollInFlight = false
+    let heartbeatInFlight = false
+    const controller = new AbortController()
+
+    function handleRequestError(error) {
+      if (!active || error.name === 'AbortError') return
+
+      if (TERMINAL_ROOM_ERRORS.has(error.code)) {
+        terminal = true
+        removeParticipantToken(code)
+        setRoom(null)
+        setViewState(error.code === 'room_not_found' ? 'not-found' : 'not-participant')
+        return
+      }
+
+      setConnectionError(error.message || 'Connection lost. Trying again…')
+      setViewState((current) => current === 'ready' ? current : 'network-error')
+    }
+
+    async function pollRoom() {
+      if (terminal || pollInFlight) return
+      pollInFlight = true
+
+      try {
+        const result = await getRoom(code, participantToken, {
+          signal: controller.signal,
+        })
+
+        if (!active || terminal) return
+        setRoom(result.room)
+        setConnectionError('')
+        setViewState('ready')
+      } catch (error) {
+        handleRequestError(error)
+      } finally {
+        pollInFlight = false
+      }
+    }
+
+    async function sendHeartbeat() {
+      if (terminal || heartbeatInFlight) return
+      heartbeatInFlight = true
+
+      try {
+        const result = await heartbeatRoom(code, participantToken, {
+          signal: controller.signal,
+        })
+
+        if (!active || terminal) return
+        setRoom(result.room)
+        setConnectionError('')
+        setViewState('ready')
+      } catch (error) {
+        handleRequestError(error)
+      } finally {
+        heartbeatInFlight = false
+      }
+    }
+
+    void sendHeartbeat()
+    const pollTimer = window.setInterval(pollRoom, POLL_INTERVAL_MS)
+    const heartbeatTimer = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS)
+
+    return () => {
+      active = false
+      controller.abort()
+      window.clearInterval(pollTimer)
+      window.clearInterval(heartbeatTimer)
+    }
+  }, [code, participantToken, retryKey])
+
+  async function handleLeaveRoom() {
     const confirmed = window.confirm(
       'Leave this room? Your spot will become available to someone else.',
     )
 
-    if (!confirmed) return
+    if (!confirmed || !participantToken) return
 
-    leaveRoom(code)
-    navigate('/', { replace: true })
+    setLeaveError('')
+    setIsLeaving(true)
+
+    try {
+      await leaveRoom(code, participantToken)
+      removeParticipantToken(code)
+      navigate('/', { replace: true })
+    } catch (error) {
+      if (TERMINAL_ROOM_ERRORS.has(error.code)) {
+        removeParticipantToken(code)
+        navigate('/', { replace: true })
+        return
+      }
+
+      setLeaveError(error.message || 'Couldn’t leave the room. Please try again.')
+      setIsLeaving(false)
+    }
   }
 
-  if (!room) {
+  if (viewState === 'not-found') {
     return (
-      <div className="page flow-page">
-        <div className="flow-wrap">
-          <BackLink />
-          <div className="glass-card empty-room">
-            <h1>Room not found</h1>
-            <p>This room doesn’t exist on this device, or its code may be incorrect.</p>
-            <Link className="button button-primary" to="/join">Try another code</Link>
-          </div>
-        </div>
-      </div>
+      <RoomStateCard title="Room no longer available" message="This room has expired or no longer exists.">
+        <Link className="button button-primary" to="/">Return Home</Link>
+      </RoomStateCard>
     )
   }
 
+  if (viewState === 'not-participant' || !participantToken) {
+    return (
+      <RoomStateCard title="You’re no longer in this room" message="Your participant session has ended. You can return home and join again if a slot is available.">
+        <Link className="button button-primary" to="/">Return Home</Link>
+      </RoomStateCard>
+    )
+  }
+
+  if (viewState === 'network-error' && !room) {
+    return (
+      <RoomStateCard title="Can’t reach the room" message={connectionError}>
+        <button className="button button-primary" type="button" onClick={() => {
+          setViewState('loading')
+          setRetryKey((value) => value + 1)
+        }}>
+          Try Again
+        </button>
+      </RoomStateCard>
+    )
+  }
+
+  if (!room) {
+    return <RoomStateCard title="Opening your room" message="Connecting to the shared room…" loading />
+  }
+
   const isFull = room.participantsCount >= room.maxParticipants
+  const statusText = connectionError
+    ? 'Reconnecting…'
+    : isFull
+      ? 'Both participants connected'
+      : 'Waiting for second person'
 
   return (
     <div className="page room-page">
@@ -61,7 +209,7 @@ export function RoomPage() {
             <h1 className="page-heading">Your bridge</h1>
             <p className="page-intro">{isFull ? 'Room full — both participants are connected.' : 'Waiting for the second person to join.'}</p>
           </div>
-          <span className={`status-badge${isFull ? ' full' : ''}`}>{isFull ? 'Both participants connected' : 'Waiting for second person'}</span>
+          <span className={`status-badge${connectionError ? ' offline' : isFull ? ' full' : ''}`}>{statusText}</span>
         </div>
 
         <div className="glass-card">
@@ -69,12 +217,12 @@ export function RoomPage() {
             <RoomCodeCard code={room.code} />
             <div className="participant-count">
               <strong>{room.participantsCount} of {room.maxParticipants}</strong>
-              Participant limit
+              Active participants
             </div>
           </div>
 
           <div className="participants-grid">
-            <ParticipantSlot number="1" occupied />
+            <ParticipantSlot number="1" occupied={room.participantsCount > 0} />
             <ParticipantSlot number="2" occupied={room.participantsCount > 1} />
           </div>
 
@@ -83,10 +231,13 @@ export function RoomPage() {
             <span>Soon, this is where each person will connect Spotify or Apple Music and choose a playlist to sync.</span>
           </div>
 
+          {connectionError && <p className="connection-notice" role="status">{connectionError}</p>}
+          {leaveError && <p className="form-error room-action-error" role="alert">{leaveError}</p>}
+
           <div className="room-actions">
             <CopyButton value={room.code} />
-            <button className="button button-leave" type="button" onClick={handleLeaveRoom}>
-              <LeaveIcon /> Leave Room
+            <button className="button button-leave" type="button" onClick={handleLeaveRoom} disabled={isLeaving} aria-busy={isLeaving}>
+              <LeaveIcon /> {isLeaving ? 'Leaving…' : 'Leave Room'}
             </button>
           </div>
         </div>

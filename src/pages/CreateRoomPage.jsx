@@ -3,10 +3,28 @@ import { Link } from 'react-router-dom'
 import { BackLink } from '../components/BackLink.jsx'
 import { ArrowRightIcon, CheckIcon, LinkIcon, PlusIcon } from '../components/Icons.jsx'
 import { RoomCodeCard } from '../components/RoomCodeCard.jsx'
-import { createRoom } from '../utils/roomStorage.js'
+import { createRoom } from '../api/roomApi.js'
+import { saveParticipantToken } from '../utils/roomSession.js'
 
 export function CreateRoomPage() {
   const [room, setRoom] = useState(null)
+  const [error, setError] = useState('')
+  const [isCreating, setIsCreating] = useState(false)
+
+  async function handleCreateRoom() {
+    setError('')
+    setIsCreating(true)
+
+    try {
+      const result = await createRoom()
+      saveParticipantToken(result.room.code, result.participantToken)
+      setRoom(result.room)
+    } catch (requestError) {
+      setError(requestError.message || 'Couldn’t create a room. Please try again.')
+    } finally {
+      setIsCreating(false)
+    }
+  }
 
   return (
     <div className="page flow-page">
@@ -24,9 +42,10 @@ export function CreateRoomPage() {
             <span className="card-icon"><LinkIcon /></span>
             <h2>Your shared space</h2>
             <p>One room, two people, and a single bridge between your playlists.</p>
-            <button className="button button-primary button-full flow-action-button" type="button" onClick={() => setRoom(createRoom())}>
-              <PlusIcon /> Create Room
+            <button className="button button-primary button-full flow-action-button" type="button" onClick={handleCreateRoom} disabled={isCreating} aria-busy={isCreating}>
+              <PlusIcon /> {isCreating ? 'Creating…' : 'Create Room'}
             </button>
+            {error && <p className="form-error action-error" role="alert">{error}</p>}
           </div>
         ) : (
           <div className="glass-card action-card" aria-live="polite">

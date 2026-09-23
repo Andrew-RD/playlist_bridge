@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BackLink } from '../components/BackLink.jsx'
 import { ArrowRightIcon, InfoIcon } from '../components/Icons.jsx'
-import { joinRoom, normalizeRoomCode } from '../utils/roomStorage.js'
+import { joinRoom, normalizeRoomCode } from '../api/roomApi.js'
+import { getParticipantToken, saveParticipantToken } from '../utils/roomSession.js'
 
 export function JoinRoomPage() {
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
+  const [isJoining, setIsJoining] = useState(false)
   const navigate = useNavigate()
 
   function handleChange(event) {
@@ -14,7 +16,7 @@ export function JoinRoomPage() {
     if (error) setError('')
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
 
     if (code.length < 6) {
@@ -22,14 +24,17 @@ export function JoinRoomPage() {
       return
     }
 
-    const result = joinRoom(code)
+    setError('')
+    setIsJoining(true)
 
-    if (!result.ok) {
-      setError(result.reason === 'full' ? 'That room is already full.' : 'We couldn’t find that room. Check the code and try again.')
-      return
+    try {
+      const result = await joinRoom(code, getParticipantToken(code))
+      saveParticipantToken(result.room.code, result.participantToken)
+      navigate(`/room/${result.room.code}`)
+    } catch (requestError) {
+      setError(requestError.message || 'Couldn’t join the room. Please try again.')
+      setIsJoining(false)
     }
-
-    navigate(`/room/${result.room.code}`)
   }
 
   return (
@@ -66,12 +71,12 @@ export function JoinRoomPage() {
               <p className="form-help" id="room-code-help">Codes use six letters or numbers.</p>
             )}
           </div>
-          <button className="button button-primary button-full flow-action-button" type="submit">
-            Join Room <ArrowRightIcon />
+          <button className="button button-primary button-full flow-action-button" type="submit" disabled={isJoining} aria-busy={isJoining}>
+            {isJoining ? 'Joining…' : 'Join Room'} <ArrowRightIcon />
           </button>
         </form>
 
-        <p className="prototype-note"><InfoIcon /> Rooms are stored on this device for the frontend prototype.</p>
+        <p className="prototype-note"><InfoIcon /> Room state is shared securely across devices.</p>
       </div>
     </div>
   )
