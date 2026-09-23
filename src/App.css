@@ -1629,6 +1629,250 @@
   margin-top: 13px;
 }
 
+.sync-card {
+  margin: 23px 0;
+  padding: 21px;
+  border: 1px solid rgba(142, 91, 242, 0.2);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 15% 5%, rgba(101, 230, 149, 0.07), transparent 38%),
+    radial-gradient(circle at 90% 90%, rgba(244, 111, 158, 0.07), transparent 40%),
+    rgba(25, 17, 29, 0.58);
+}
+
+.sync-card-heading h2 {
+  margin: 7px 0 4px;
+  color: #f0eaf2;
+  font-size: 1.02rem;
+  font-weight: 710;
+}
+
+.sync-card-heading p,
+.sync-shortcut-action > p,
+.sync-partner-note,
+.sync-mvp-note {
+  margin: 0;
+  color: #928796;
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+.sync-ready-label {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--green);
+  font-size: 0.63rem;
+  font-weight: 780;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.sync-ready-label svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sync-route {
+  display: grid;
+  margin: 17px 0;
+  gap: 7px;
+}
+
+.sync-route-side {
+  display: flex;
+  min-height: 60px;
+  padding: 11px 13px;
+  gap: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 15px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.sync-route-side > span {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  border-radius: 11px;
+  place-items: center;
+}
+
+.sync-route-side.spotify > span {
+  color: var(--green);
+  background: rgba(101, 230, 149, 0.08);
+}
+
+.sync-route-side.apple > span {
+  color: #f47aa3;
+  background: rgba(244, 111, 158, 0.08);
+}
+
+.sync-route-side svg {
+  width: 20px;
+  height: 20px;
+}
+
+.sync-route-side > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.sync-route-side small {
+  color: #817684;
+  font-size: 0.61rem;
+  font-weight: 720;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.sync-route-side strong {
+  overflow: hidden;
+  color: #ebe4ee;
+  font-size: 0.82rem;
+  font-weight: 670;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sync-route-arrow {
+  color: #a78be0;
+  font-size: 1rem;
+  line-height: 1;
+  text-align: center;
+}
+
+.sync-metrics {
+  display: grid;
+  margin-bottom: 17px;
+  gap: 8px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.sync-metric {
+  display: flex;
+  min-width: 0;
+  min-height: 65px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.022);
+  text-align: center;
+}
+
+.sync-metric strong {
+  color: #eae3ed;
+  font-size: 1.02rem;
+}
+
+.sync-metric span {
+  color: #817684;
+  font-size: 0.63rem;
+}
+
+.sync-metric.added strong {
+  color: var(--green);
+}
+
+.sync-metric.pending strong {
+  color: #eac779;
+}
+
+.sync-metric.not-found strong {
+  color: #e99aae;
+}
+
+.sync-shortcut-action,
+.sync-partner-note {
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.075);
+}
+
+.sync-instructions-button {
+  min-height: 42px;
+  margin-top: 13px;
+  padding-inline: 17px;
+  font-size: 0.78rem;
+}
+
+.sync-instructions-panel {
+  margin-top: 15px;
+  padding: 15px;
+  border: 1px solid rgba(142, 91, 242, 0.15);
+  border-radius: 15px;
+  background: rgba(8, 5, 10, 0.22);
+}
+
+.sync-instructions-panel > p {
+  margin: 0;
+  color: #948999;
+  font-size: 0.71rem;
+  line-height: 1.5;
+}
+
+.sync-endpoints {
+  display: grid;
+  margin: 13px 0;
+  gap: 8px;
+}
+
+.sync-endpoint-value {
+  padding: 10px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sync-endpoint-value > span {
+  display: block;
+  margin-bottom: 5px;
+  color: #817684;
+  font-size: 0.59rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.sync-endpoint-value > div {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+}
+
+.sync-endpoint-value code {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+  color: #dcd2e1;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.65rem;
+  line-height: 1.45;
+}
+
+.sync-endpoint-value .icon-button {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+}
+
+.sync-token-note code {
+  color: #d9bdd0;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.65rem;
+}
+
+.sync-mvp-note {
+  margin-top: 14px;
+  color: #776c7b;
+  font-size: 0.68rem;
+}
+
 .future-note {
   display: flex;
   padding: 17px;
@@ -1903,6 +2147,14 @@
 
   .apple-ready-pill {
     margin-left: 56px;
+  }
+
+  .sync-card {
+    padding: 17px;
+  }
+
+  .sync-instructions-button {
+    width: 100%;
   }
 
   .room-code-box {

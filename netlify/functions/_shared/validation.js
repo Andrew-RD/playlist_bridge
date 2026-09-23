@@ -9,6 +9,10 @@ export function isValidRoomCode(value) {
   return ROOM_CODE_PATTERN.test(value)
 }
 
-export function isValidParticipantToken(value) {
+export function isValidUuid(value) {
   return typeof value === 'string' && UUID_PATTERN.test(value)
+}
+
+export function isValidParticipantToken(value) {
+  return isValidUuid(value)
 }

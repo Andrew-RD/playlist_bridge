@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto'
 import { RequestError, roomFromRpc } from './http.js'
 import { getPlatformRoomState } from './platform-service.js'
 import { firstRpcRow, getSupabase } from './supabase.js'
+import { getSpotifyAppleSyncStatus } from './spotify-apple-sync-service.js'
 import { getSpotifyRoomState } from './spotify-service.js'
 import { isValidParticipantToken, isValidRoomCode, normalizeRoomCode } from './validation.js'
 
@@ -57,9 +58,10 @@ async function callRoomRpc(name, params) {
 }
 
 async function enrichRoom(room, code, participantToken) {
-  const [platform, spotify] = await Promise.all([
+  const [platform, spotify, spotifyToAppleSync] = await Promise.all([
     getPlatformRoomState(code, participantToken),
     getSpotifyRoomState(code, participantToken),
+    getSpotifyAppleSyncStatus(code, participantToken),
   ])
 
   return {
@@ -69,6 +71,7 @@ async function enrichRoom(room, code, participantToken) {
     rolesAssigned: platform.rolesAssigned,
     spotify,
     apple: platform.apple,
+    spotifyToAppleSync,
   }
 }
 

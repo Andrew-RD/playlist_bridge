@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CopyButton } from '../components/CopyButton.jsx'
 import { AppleShortcutCard } from '../components/AppleShortcutCard.jsx'
-import { InfoIcon, LeaveIcon, UserIcon } from '../components/Icons.jsx'
+import { LeaveIcon, UserIcon } from '../components/Icons.jsx'
 import { PlatformRoles } from '../components/PlatformRoles.jsx'
 import { RoomCodeCard } from '../components/RoomCodeCard.jsx'
+import { SpotifyAppleSyncCard } from '../components/SpotifyAppleSyncCard.jsx'
 import { SpotifyRoomCard } from '../components/SpotifyRoomCard.jsx'
 import {
   getRoom,
@@ -280,10 +281,15 @@ export function RoomPage() {
                 }}
               />
 
-              <div className="future-note">
-                <InfoIcon />
-                <span>Song matching and playlist synchronization come in the next milestone.</span>
-              </div>
+              <SpotifyAppleSyncCard
+                currentRole={room.currentParticipant?.role}
+                spotify={room.spotify ?? {
+                  connected: false,
+                  playlist: null,
+                }}
+                apple={room.apple ?? { verified: false }}
+                status={room.spotifyToAppleSync}
+              />
             </>
           )}
 

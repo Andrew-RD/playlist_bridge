@@ -13,6 +13,23 @@ function hashBridgeToken(token) {
   return createHash('sha256').update(token, 'utf8').digest('hex')
 }
 
+export function bridgeTokenHashFromAuthorization(authorizationValue) {
+  const match = typeof authorizationValue === 'string'
+    ? authorizationValue.match(/^Bearer ([^\s]+)$/i)
+    : null
+  const bridgeToken = match?.[1]
+
+  if (!bridgeToken || !BRIDGE_TOKEN_PATTERN.test(bridgeToken)) {
+    throw new RequestError(
+      'invalid_bridge_token',
+      'The bridge token is invalid or no longer active.',
+      401,
+    )
+  }
+
+  return hashBridgeToken(bridgeToken)
+}
+
 function createBridgeToken() {
   return `pb_${randomBytes(32).toString('base64url')}`
 }
@@ -53,21 +70,8 @@ export async function configureAppleShortcut(
 }
 
 export async function verifyAppleShortcut(authorizationValue) {
-  const match = typeof authorizationValue === 'string'
-    ? authorizationValue.match(/^Bearer ([^\s]+)$/i)
-    : null
-  const bridgeToken = match?.[1]
-
-  if (!bridgeToken || !BRIDGE_TOKEN_PATTERN.test(bridgeToken)) {
-    throw new RequestError(
-      'invalid_bridge_token',
-      'The bridge token is invalid or no longer active.',
-      401,
-    )
-  }
-
   const row = await platformRpc('verify_apple_shortcut', {
-    p_token_hash: hashBridgeToken(bridgeToken),
+    p_token_hash: bridgeTokenHashFromAuthorization(authorizationValue),
   })
 
   if (row.result_status !== 'verified') {
